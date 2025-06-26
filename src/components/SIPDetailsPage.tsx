@@ -15,17 +15,11 @@ import {
   ArrowRight,
   Star
 } from 'lucide-react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  assessmentCompleted?: boolean;
-  assessmentData?: any;
-}
+import { UserProfile, AssessmentData } from '../lib/supabase';
 
 interface SIPDetailsPageProps {
-  user: User;
+  user: UserProfile;
+  assessmentData: AssessmentData;
   onBack: () => void;
 }
 
@@ -39,14 +33,13 @@ interface SIPOption {
   suitable: string[];
 }
 
-export const SIPDetailsPage: React.FC<SIPDetailsPageProps> = ({ user, onBack }) => {
+export const SIPDetailsPage: React.FC<SIPDetailsPageProps> = ({ user, assessmentData, onBack }) => {
   const [calculatorData, setCalculatorData] = useState({
     monthlyAmount: 5000,
     years: 10,
     expectedReturn: 12
   });
 
-  const assessmentData = user.assessmentData || {};
   const userAge = assessmentData.age ? parseInt(assessmentData.age.split('-')[0]) : 25;
   const userBudget = assessmentData.monthlyInvestment || '5000-10000';
   const userRisk = assessmentData.riskTolerance || 'moderate';

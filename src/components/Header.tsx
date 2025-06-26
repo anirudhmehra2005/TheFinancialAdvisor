@@ -1,14 +1,9 @@
 import React from 'react';
 import { TrendingUp, LogOut, User } from 'lucide-react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import { UserProfile } from '../lib/supabase';
 
 interface HeaderProps {
-  user: User;
+  user: UserProfile;
   onLogout: () => void;
 }
 
@@ -30,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                 <User className="w-4 h-4 text-blue-600" />
               </div>
               <div className="text-sm">
-                <p className="font-medium text-gray-900">{user.name}</p>
+                <p className="font-medium text-gray-900">{user.full_name}</p>
                 <p className="text-gray-500">{user.email}</p>
               </div>
             </div>

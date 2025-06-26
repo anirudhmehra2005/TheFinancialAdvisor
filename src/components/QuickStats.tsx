@@ -1,21 +1,12 @@
 import React from 'react';
 import { TrendingUp, DollarSign, Target, Calendar } from 'lucide-react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  assessmentCompleted?: boolean;
-  assessmentData?: any;
-}
+import { AssessmentData } from '../lib/supabase';
 
 interface QuickStatsProps {
-  user?: User;
+  assessmentData: AssessmentData;
 }
 
-export const QuickStats: React.FC<QuickStatsProps> = ({ user }) => {
-  const assessmentData = user?.assessmentData || {};
-  
+export const QuickStats: React.FC<QuickStatsProps> = ({ assessmentData }) => {
   const getGoalText = (goal: string) => {
     switch (goal) {
       case 'emergency-fund': return 'Emergency Fund';

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { TrendingUp, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { TrendingUp, Eye, EyeOff, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 interface AuthScreenProps {
-  mode: 'login' | 'signup';
-  onLogin: (userData: { name: string; email: string }) => void;
-  onToggleMode: () => void;
+  mode: 'login' | 'signup' | 'reset';
+  onToggleMode: (mode: 'login' | 'signup' | 'reset') => void;
 }
 
 interface FormErrors {
@@ -12,9 +12,11 @@ interface FormErrors {
   email?: string;
   password?: string;
   confirmPassword?: string;
+  general?: string;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleMode }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onToggleMode }) => {
+  const { signUp, signIn, resetPassword } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,6 +28,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,19 +56,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (!validatePassword(formData.password)) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
+    // Password validation (not for reset)
+    if (mode !== 'reset') {
+      if (!formData.password) {
+        newErrors.password = 'Password is required';
+      } else if (!validatePassword(formData.password)) {
+        newErrors.password = 'Password must be at least 8 characters';
+      }
 
-    // Confirm password validation for signup
-    if (mode === 'signup') {
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = 'Please confirm your password';
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
+      // Confirm password validation for signup
+      if (mode === 'signup') {
+        if (!formData.confirmPassword) {
+          newErrors.confirmPassword = 'Please confirm your password';
+        } else if (formData.password !== formData.confirmPassword) {
+          newErrors.confirmPassword = 'Passwords do not match';
+        }
       }
     }
 
@@ -81,15 +86,35 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
     }
 
     setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      onLogin({ 
-        name: formData.name || formData.email.split('@')[0], 
-        email: formData.email 
-      });
+    setErrors({});
+    setSuccessMessage('');
+
+    try {
+      if (mode === 'signup') {
+        const { error } = await signUp(formData.email, formData.password, formData.name);
+        if (error) {
+          setErrors({ general: error.message });
+        } else {
+          setSuccessMessage('Account created successfully! Please check your email to verify your account.');
+        }
+      } else if (mode === 'login') {
+        const { error } = await signIn(formData.email, formData.password);
+        if (error) {
+          setErrors({ general: error.message });
+        }
+      } else if (mode === 'reset') {
+        const { error } = await resetPassword(formData.email);
+        if (error) {
+          setErrors({ general: error.message });
+        } else {
+          setSuccessMessage('Password reset email sent! Please check your inbox.');
+        }
+      }
+    } catch (error) {
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,6 +131,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
         [name]: undefined
       }));
     }
+    
+    // Clear general error
+    if (errors.general) {
+      setErrors(prev => ({
+        ...prev,
+        general: undefined
+      }));
+    }
   };
 
   const getInputClassName = (fieldName: keyof FormErrors) => {
@@ -120,6 +153,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
       return `${baseClass} ${successClass}`;
     }
     return `${baseClass} ${normalClass}`;
+  };
+
+  const getTitle = () => {
+    switch (mode) {
+      case 'signup': return 'Create Account';
+      case 'reset': return 'Reset Password';
+      default: return 'Welcome Back';
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (mode) {
+      case 'signup': return 'Join thousands of smart investors today';
+      case 'reset': return 'Enter your email to reset your password';
+      default: return 'Sign in to continue your investment journey';
+    }
   };
 
   return (
@@ -139,16 +188,29 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
         {/* Auth Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {mode === 'login' ? 'Welcome Back' : 'Create Account'}
-            </h2>
-            <p className="text-gray-600">
-              {mode === 'login' 
-                ? 'Sign in to continue your investment journey' 
-                : 'Join thousands of smart investors today'
-              }
-            </p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{getTitle()}</h2>
+            <p className="text-gray-600">{getSubtitle()}</p>
           </div>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 text-green-800">
+                <CheckCircle className="w-5 h-5" />
+                <p className="text-sm">{successMessage}</p>
+              </div>
+            </div>
+          )}
+
+          {/* General Error */}
+          {errors.general && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 text-red-800">
+                <AlertCircle className="w-5 h-5" />
+                <p className="text-sm">{errors.general}</p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name Field - Only for Signup */}
@@ -166,6 +228,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
                     onChange={handleInputChange}
                     className={getInputClassName('name')}
                     placeholder="Enter your full name"
+                    disabled={isSubmitting}
                   />
                   {formData.name && !errors.name && (
                     <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
@@ -194,6 +257,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
                   onChange={handleInputChange}
                   className={getInputClassName('email')}
                   placeholder="Enter your email address"
+                  disabled={isSubmitting}
                 />
                 {formData.email && !errors.email && validateEmail(formData.email) && (
                   <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
@@ -207,41 +271,45 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
               )}
             </div>
 
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className={getInputClassName('password')}
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              {errors.password && (
-                <div className="flex items-center gap-2 mt-2 text-red-600 text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.password}
+            {/* Password Field - Not for Reset */}
+            {mode !== 'reset' && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className={getInputClassName('password')}
+                    placeholder="Enter your password"
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    disabled={isSubmitting}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
-              )}
-              {mode === 'signup' && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Password must be at least 8 characters long
-                </p>
-              )}
-            </div>
+                {errors.password && (
+                  <div className="flex items-center gap-2 mt-2 text-red-600 text-sm">
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.password}
+                  </div>
+                )}
+                {mode === 'signup' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Password must be at least 8 characters long
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Confirm Password Field - Only for Signup */}
             {mode === 'signup' && (
@@ -258,11 +326,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
                     onChange={handleInputChange}
                     className={getInputClassName('confirmPassword')}
                     placeholder="Confirm your password"
+                    disabled={isSubmitting}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    disabled={isSubmitting}
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -284,33 +354,57 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onLogin, onToggleM
             >
               {isSubmitting ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  {mode === 'login' ? 'Signing In...' : 'Creating Account...'}
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {mode === 'login' ? 'Signing In...' : mode === 'signup' ? 'Creating Account...' : 'Sending Email...'}
                 </div>
               ) : (
-                mode === 'login' ? 'Sign In' : 'Create Account'
+                mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Email'
               )}
             </button>
           </form>
 
           {/* Toggle Auth Mode */}
-          <div className="mt-8 text-center">
+          <div className="mt-8 text-center space-y-4">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-4 bg-white text-gray-500">
-                  {mode === 'login' ? "Don't have an account?" : "Already have an account?"}
+                  {mode === 'reset' ? 'Remember your password?' : 
+                   mode === 'login' ? "Don't have an account?" : "Already have an account?"}
                 </span>
               </div>
             </div>
-            <button
-              onClick={onToggleMode}
-              className="mt-4 text-blue-600 font-semibold hover:text-blue-700 transition-colors hover:underline"
-            >
-              {mode === 'login' ? 'Create Account' : 'Sign In'}
-            </button>
+            
+            <div className="flex flex-col gap-2">
+              {mode === 'reset' ? (
+                <button
+                  onClick={() => onToggleMode('login')}
+                  className="text-blue-600 font-semibold hover:text-blue-700 transition-colors hover:underline"
+                >
+                  Back to Sign In
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => onToggleMode(mode === 'login' ? 'signup' : 'login')}
+                    className="text-blue-600 font-semibold hover:text-blue-700 transition-colors hover:underline"
+                  >
+                    {mode === 'login' ? 'Create Account' : 'Sign In'}
+                  </button>
+                  
+                  {mode === 'login' && (
+                    <button
+                      onClick={() => onToggleMode('reset')}
+                      className="text-gray-600 text-sm hover:text-gray-800 transition-colors hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 

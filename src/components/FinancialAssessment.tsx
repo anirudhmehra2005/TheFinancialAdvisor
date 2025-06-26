@@ -11,37 +11,19 @@ import {
   BookOpen,
   Shield,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
-
-interface AssessmentData {
-  // Personal Info
-  age: string;
-  monthlyIncome: string;
-  currentSavings: string;
-  
-  // Goals
-  primaryGoal: string;
-  secondaryGoals: string[];
-  
-  // Timeline
-  investmentTimeline: string;
-  
-  // Investment Capacity
-  monthlyInvestment: string;
-  
-  // Risk Tolerance
-  riskTolerance: string;
-  
-  // Experience
-  experienceLevel: string;
-}
+import { useAssessment } from '../hooks/useAssessment';
+import { AssessmentData } from '../lib/supabase';
 
 interface FinancialAssessmentProps {
-  onComplete: (data: AssessmentData) => void;
+  userId: string;
+  onComplete: () => void;
 }
 
-export const FinancialAssessment: React.FC<FinancialAssessmentProps> = ({ onComplete }) => {
+export const FinancialAssessment: React.FC<FinancialAssessmentProps> = ({ userId, onComplete }) => {
+  const { saveAssessment, loading: saveLoading } = useAssessment(userId);
   const [currentStep, setCurrentStep] = useState(1);
   const [assessmentData, setAssessmentData] = useState<AssessmentData>({
     age: '',
@@ -64,11 +46,17 @@ export const FinancialAssessment: React.FC<FinancialAssessmentProps> = ({ onComp
     }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
-      onComplete(assessmentData);
+      try {
+        await saveAssessment(assessmentData);
+        onComplete();
+      } catch (error) {
+        console.error('Failed to save assessment:', error);
+        // You might want to show an error message to the user here
+      }
     }
   };
 
@@ -473,11 +461,20 @@ export const FinancialAssessment: React.FC<FinancialAssessmentProps> = ({ onComp
 
             <button
               onClick={handleNext}
-              disabled={!isStepValid()}
+              disabled={!isStepValid() || saveLoading}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] disabled:transform-none"
             >
-              {currentStep === totalSteps ? 'Complete Assessment' : 'Next'}
-              <ArrowRight className="w-5 h-5" />
+              {saveLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  {currentStep === totalSteps ? 'Complete Assessment' : 'Next'}
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </button>
           </div>
         </div>

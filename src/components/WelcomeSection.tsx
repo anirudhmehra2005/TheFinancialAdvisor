@@ -1,21 +1,13 @@
 import React from 'react';
 import { ArrowRight, TrendingUp, Target } from 'lucide-react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  assessmentCompleted?: boolean;
-  assessmentData?: any;
-}
+import { UserProfile, AssessmentData } from '../lib/supabase';
 
 interface WelcomeSectionProps {
-  user: User;
+  user: UserProfile;
+  assessmentData: AssessmentData;
 }
 
-export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ user }) => {
-  const assessmentData = user.assessmentData || {};
-  
+export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ user, assessmentData }) => {
   const getPersonalizedMessage = () => {
     const { riskTolerance, experienceLevel, primaryGoal } = assessmentData;
     
@@ -39,7 +31,7 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({ user }) => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
         <div className="mb-6 lg:mb-0">
           <h1 className="text-3xl lg:text-4xl font-bold mb-2">
-            Welcome back, {user.name}! 👋
+            Welcome back, {user.full_name}! 👋
           </h1>
           <p className="text-blue-100 text-lg mb-4">
             {getPersonalizedMessage()}

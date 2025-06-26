@@ -12,17 +12,11 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { SIPDetailsPage } from './SIPDetailsPage';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  assessmentCompleted?: boolean;
-  assessmentData?: any;
-}
+import { UserProfile, AssessmentData } from '../lib/supabase';
 
 interface InvestmentCategoriesProps {
-  user: User;
+  user: UserProfile;
+  assessmentData: AssessmentData;
 }
 
 interface InvestmentOption {
@@ -43,9 +37,8 @@ interface InvestmentOption {
   suitableFor: string[];
 }
 
-export const InvestmentCategories: React.FC<InvestmentCategoriesProps> = ({ user }) => {
+export const InvestmentCategories: React.FC<InvestmentCategoriesProps> = ({ user, assessmentData }) => {
   const [selectedInvestment, setSelectedInvestment] = useState<string | null>(null);
-  const assessmentData = user.assessmentData || {};
 
   const allInvestmentOptions: InvestmentOption[] = [
     {
@@ -232,7 +225,7 @@ export const InvestmentCategories: React.FC<InvestmentCategoriesProps> = ({ user
 
   // Show detailed page if an investment is selected
   if (selectedInvestment === 'sip') {
-    return <SIPDetailsPage user={user} onBack={handleBack} />;
+    return <SIPDetailsPage user={user} assessmentData={assessmentData} onBack={handleBack} />;
   }
 
   const renderInvestmentCard = (option: InvestmentOption, isRecommended: boolean = false) => {
