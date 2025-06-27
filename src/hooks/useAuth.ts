@@ -76,12 +76,20 @@ export const useAuth = () => {
         .single();
 
       if (error) {
+        // Handle the case where no profile is found (expected for new users)
+        if (error.code === 'PGRST116') {
+          return null;
+        }
         console.error('Error fetching user profile:', error);
         return null;
       }
 
       return data;
-    } catch (error) {
+    } catch (error: any) {
+      // Handle the case where no profile is found (expected for new users)
+      if (error?.code === 'PGRST116') {
+        return null;
+      }
       console.error('Error fetching user profile:', error);
       return null;
     }

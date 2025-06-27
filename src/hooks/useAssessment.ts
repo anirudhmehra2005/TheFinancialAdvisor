@@ -33,9 +33,15 @@ export const useAssessment = (userId: string | null) => {
 
       setAssessment(data || null);
       setError(null);
-    } catch (err) {
-      console.error('Error fetching assessment:', err);
-      setError('Failed to load assessment data');
+    } catch (err: any) {
+      // Handle the case where no assessment is found (expected for new users)
+      if (err?.code === 'PGRST116') {
+        setAssessment(null);
+        setError(null);
+      } else {
+        console.error('Error fetching assessment:', err);
+        setError('Failed to load assessment data');
+      }
     } finally {
       setLoading(false);
     }
