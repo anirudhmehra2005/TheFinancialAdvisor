@@ -36,7 +36,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onToggleMode }) =>
   };
 
   const validatePassword = (password: string): boolean => {
-    return password.length >= 8;
+    return password.length >= 6; // Simplified to 6 characters for MVP
   };
 
   const validateForm = (): boolean => {
@@ -61,7 +61,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onToggleMode }) =>
       if (!formData.password) {
         newErrors.password = 'Password is required';
       } else if (!validatePassword(formData.password)) {
-        newErrors.password = 'Password must be at least 8 characters';
+        newErrors.password = 'Password must be at least 6 characters';
       }
 
       // Confirm password validation for signup
@@ -78,6 +78,34 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onToggleMode }) =>
     return Object.keys(newErrors).length === 0;
   };
 
+  const getErrorMessage = (error: any): string => {
+    if (!error) return 'An unexpected error occurred';
+    
+    const message = error.message || error;
+    
+    // Convert technical errors to user-friendly messages
+    if (message.includes('Invalid login credentials')) {
+      return 'Invalid email or password. Please check your credentials and try again.';
+    }
+    if (message.includes('Email not confirmed')) {
+      return 'Please check your email and click the confirmation link before signing in.';
+    }
+    if (message.includes('User already registered')) {
+      return 'An account with this email already exists. Please sign in instead.';
+    }
+    if (message.includes('Password should be at least')) {
+      return 'Password must be at least 6 characters long.';
+    }
+    if (message.includes('row-level security')) {
+      return 'There was an issue creating your account. Please try again.';
+    }
+    if (message.includes('Failed to create user profile')) {
+      return 'Account created but there was an issue setting up your profile. Please try signing in.';
+    }
+    
+    return message;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -91,21 +119,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onToggleMode }) =>
 
     try {
       if (mode === 'signup') {
-        const { error } = await signUp(formData.email, formData.password, formData.name);
-        if (error) {
-          setErrors({ general: error.message });
+        const { error, success } = await signUp(formData.email, formData.password, formData.name);
+        if (error || !success) {
+          setErrors({ general: getErrorMessage(error) });
         } else {
-          setSuccessMessage('Account created successfully! Please check your email to verify your account.');
+          setSuccessMessage('Account created successfully! You can now sign in.');
+          // Auto-redirect to login after successful signup
+          setTimeout(() => {
+            onToggleMode('login');
+          }, 2000);
         }
       } else if (mode === 'login') {
-        const { error } = await signIn(formData.email, formData.password);
-        if (error) {
-          setErrors({ general: error.message });
+        const { error, success } = await signIn(formData.email, formData.password);
+        if (error || !success) {
+          setErrors({ general: getErrorMessage(error) });
         }
+        // No need to handle success here - the auth state change will handle navigation
       } else if (mode === 'reset') {
-        const { error } = await resetPassword(formData.email);
-        if (error) {
-          setErrors({ general: error.message });
+        const { error, success } = await resetPassword(formData.email);
+        if (error || !success) {
+          setErrors({ general: getErrorMessage(error) });
         } else {
           setSuccessMessage('Password reset email sent! Please check your inbox.');
         }
@@ -305,7 +338,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onToggleMode }) =>
                 )}
                 {mode === 'signup' && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Password must be at least 8 characters long
+                    Password must be at least 6 characters long
                   </p>
                 )}
               </div>
